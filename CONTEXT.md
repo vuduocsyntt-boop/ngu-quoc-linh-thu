@@ -11,7 +11,6 @@
 ## 2. Việc cần làm
 1. Thay hình ảnh hiển thị của "ngũ đại cường quốc" (xem yeu-cau/ngu-dai-cuong-quoc.md)
 2. Thêm pet mới vào game (xem yeu-cau/pet-moi.md)
-3. Thêm hệ thống tiến hóa pet (xem yeu-cau/tien-hoa-pet.md)
 
 ## 3. Quy ước
 - Không sửa các phần không được nhắc trong yêu cầu
@@ -29,3 +28,4 @@
 
 ## 6. Cập nhật lần cuối
 - Ngày: [dd/mm/yyyy]
+- Tên account: [ đã dùng]
