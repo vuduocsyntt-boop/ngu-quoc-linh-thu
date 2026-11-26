@@ -1,69 +1,37 @@
-# BÁO CÁO TIẾN ĐỘ – Ngũ Quốc Linh Thú (goPet mod)
+BÁO CÁO TIẾN ĐỘ - Sửa cơ chế sinh quái (jar Sasuke)
 
-Cập nhật: 26/11/2026. Claude khác đọc file này và CONTEXT.md trước khi làm tiếp. Giao tiếp với người dùng bằng tiếng Việt.
+Cập nhật: 2026-11-26 15:20. Dành cho Claude khác làm tiếp. Người dùng nói tiếng Việt, trả lời tiếng Việt, giao jar test từng bước.
 
-## 0. Nguyên tắc bắt buộc (người dùng yêu cầu)
-- Khi usage còn khoảng 90%: PHẢI trả file BAOCAO_TIENDO.md đầy đủ, cụ thể (đã làm gì, đang làm gì, việc tiếp theo, file nào tạo/sửa, quyết định đã chốt, lỗi/giới hạn) để Claude khác làm tiếp không gián đoạn.
-- Giữ nguyên tên file và kích thước ảnh gốc. Không sửa phần không được nhắc. Giao jar test từng hệ thống một.
+1. Yêu cầu
 
-## 1. Bối cảnh
-- Repo (công khai, chỉ đọc): https://github.com/vuduocsyntt-boop/ngu-quoc-linh-thu (CONTEXT.md, yeu-cau/…, jar). Người dùng tự cập nhật file lên GitHub.
-- Jar gốc làm việc: goPetdevdao_v1_8_gametuoitho_v4.jar. Người dùng làm trên điện thoại, test từng jar.
-- Thứ tự: 1) Maps (đang làm) 2) Ngũ đại cường quốc (yeu-cau/ngu-dai-cuong-quoc.md) 3) 10 pet Akatsuki (yeu-cau/pet-moi.md). Đã bỏ tiến hóa pet.
-- Năm nước: Hỏa Quốc/Mộc Diệp/Hokage, Lôi Quốc/Vân Ẩn/Raikage, Thủy Quốc/Vũ Ẩn/Mizukage, Phong Quốc/Sa Ẩn/Kazekage, Thổ Quốc/Thạch Ẩn/Tsuchikage.
-- Giới hạn đã nói với người dùng: không vẽ lại nhân vật/logo có sẵn của truyện (pet Akatsuki, logo làng); ảnh tileset do người dùng cung cấp nên dùng để cắt ghép.
+Jar gốc: goPetdevdao_v1_8_gametuoitho_v4_sasuke_v1.jar. Người dùng auto quét quái; quét hết thì không sinh lại, phải đổi map rồi quay lại mới có quái. (Yêu cầu "mở lv100 pet" ở lượt đầu chưa làm, người dùng chuyển sang việc này.)
 
-## 2. Kỹ thuật jar (đã xác minh)
-- Ảnh trong assets/{ui,pets,items,chars,maps}.dat, định dạng GPDT không mã hóa: "GPDT" + uint16 số mục + mỗi mục [uint16 độ dài tên][tên UTF-8][uint32 offset][uint32 size] (big-endian), dữ liệu ngay sau chỉ mục. gpdt.py đọc/ghi, đã kiểm tra roundtrip byte-identical.
-- assets/maps.dat: 260 mục newMapData/*; 251 png + 9 file không đuôi (107_b, 108_b, 190_b, 194_b, 217_b, 218_b, 2_b, 3_b, 72_b = dữ liệu hoạt ảnh, KHÔNG đụng vào).
-- Ảnh "_a" (190_a, 194_a, 218_a) là atlas: giữ nguyên bố cục, chỉ đổi màu pixel.
-- Bố cục bản đồ: jar/maps/NN.dat (không mã hóa). Map làng trong ảnh chụp của người dùng là maps/11.dat (có chuỗi "Sông Băng", "Đường lên núi", "Chợ trời" ở cuối file). Cấu trúc: byte đầu, danh sách (uint16 id ảnh, byte cờ), lưới ô nền, danh sách đối tượng (tọa độ), tên điểm đến UTF-8. ĐÃ giải mã đầy đủ (mục 7).
-- data/*.json mã hóa (GPENC2D, AES, khóa trong offline/ci.class). CHƯA giải mã. Chứa tên Hệ/Lớp/Cõi/pet, cần cho hệ thống pet.
-- Môi trường: không có mạng, có Java (JRE, không có javap), Python + PIL/numpy/scipy/cv2.
+2. Kiến thức kỹ thuật đã xác minh
+Sinh quái: offline.cz (e = quái đang sống mỗi map; d = mẫu vị trí; c = loại quái). cz.l(map) sinh các vị trí chưa có quái (mẫu không có quái sống trong 120px), chỉ chạy khi MobRespawn.lim >= số quái sống. Ngoài MobRespawn thì lim = -1 nên l() luôn rỗng (nên thắng trận không sinh ngay).
+offline.MobRespawn.check(du) được MobTick.b gọi mỗi ~1 giây từ OfflineBridge.run; gửi gói 81/22 (dp.a(List)) cho client. Loại map <=0, 11, 12, 20 (20 = Lôi đài). Đợi >=3s từ lúc vào map và từ trận cuối (offline.p.b(du.o) != null = đang đánh).
+Gói 81/22 cũng là gói danh sách quái khi vào map (ao.a(int,du,int): cz.g(map) rồi cz.h(map)).
+Giải mã data/.json: magic GPENC2\x01\x02, rồi byte[i] ^ key[i%28] ^ ((i31+7)&255), key = GoPet2026_Secure_Key_VHD_#99.
+Bộ test chạy headless: scratchpad/t/T3.java (gọi offline.dn.a(null); offline.cz.a(null) rồi cz.g/h/c/l) chạy được ngoài game: java -cp t:<thư mục jar giải nén> T3 <mapId>.
+3. Các lỗi tìm ra và bản vá
+v2 - cz.h() tự nạp lại toàn bộ quái vào server (gọi g) mỗi khi danh sách rỗng, mà offline.o tick gọi h() liên tục. Quét sạch -> server lặng lẽ có 12 quái, client không biết, MobRespawn thấy 12 > 2 nên không gửi. Vá: NOP lệnh iload_0; invokestatic cz.g trong cz.h (offset byte pattern 1ab80082b200561ab80187).
+v3 - viết lại offline/MobRespawn (nguồn: scratchpad/src/offline/MobRespawn.java, biên dịch --release 8 rồi sửa version class về 50): (a) trận treo >15s coi như hết trận; (b) lim=100000 -> luôn bù đủ vị trí trống, không còn điều kiện "còn <=2 quái".
+v4 - người dùng báo: quái mới hiện ra nhưng biến mất khi hoạt ảnh chết của quái cũ kết thúc => quái mới TRÙNG ID quái vừa chết (id = map1000+chỉ số+1), client xoá theo id. Vá: thêm lớp offline/MobId (nguồn scratchpad/src2/MobId.java), vá cz.a(int,cy,int,List,List,boolean) thay công thức id bằng MobId.id(map*1000, idx) (thêm 6 mục vào constant pool của cz.class, thay byte 122..139 của method). Mỗi lần sinh lại cùng vị trí dùng id khác: +100n với n chạy 1..9 (quái lúc vào map giữ id gốc n=0). Headless: các vòng sinh lại có id 13101.., 13201.., ...
+4. Trạng thái
 
-## 3. Maps – đã làm (jar mới nhất: goPetdevdao_v1_8_gametuoitho_v4_maps_v5.jar)
-Chỉ assets/maps.dat khác jar gốc; mọi ảnh giữ nguyên tên và kích thước (đã assert).
-- ~96 ảnh chi tiết thay bằng tileset làng lá: cây, bụi, đá, rào, đèn, biển, tượng, nhà, thùng, bậc thang (bảng ánh xạ trong build.py: MAP; vị trí cắt trong build.py).
-- Nhà đa dạng: 177→nhà cam(29), 189→nhà đỏ(22), 192→nhà xanh lá(23), 193→nhà xanh dương(21), 216→mái nâu(76), 301→nhà đỏ lớn(27), 302→29, 303→chợ(128), 304→mái(56).
-- 191 (147x44, núi nền) → vách đá Hokage 4 mặt.
-- Biển hiệu vòm 190_a/194_a/218_a: đổi màu dải sang tông làng lá (đỏ, navy, nâu gỗ, vàng gỗ), giữ chữ và icon (cắt cột 57/56 để tách dải khỏi chữ).
-- Nền: ô xám (3.png, 151.png, 162.png) → đá lát màu be (từ ảnh sàn đá be người dùng chỉ định); ô cỏ đặc 161.png (x=240..264, sân cỏ giữa map) → đá lát xám lấy từ tấm nền có biểu tượng lá; 246.png ô 0 = đá lát, ô 1 = đá có xoáy lá.
-- Tượng: 259 và 300 (hai tượng trắng xám giữa sân, 57x68) → tượng đá hộ vệ (136). Các id 232, 258, 348-353, 384, 385, 399, 400 cũng → 136.
-- Cổng: id 18 (43x27) → torii nhỏ.
+Jar test mới nhất: out/goPetdevdao_v1_8_gametuoitho_v4_sasuke_v4_respawn.jar (so với v1: đổi offline/cz.class, offline/MobRespawn.class, thêm offline/MobId.class). Đã kiểm tra: zip hợp lệ, java -Xverify:all chạy được, mô phỏng 8 vòng quét sạch/sinh lại đúng số quái. CHƯA chạy trong game thật. Cần người dùng báo: quái mới còn biến mất không, có dòng "[He Thong] Quai moi da xuat hien (n)" không.
 
-## 4. Maps – chưa làm / đang chờ
-- (ĐÃ LÀM ở v6, xem mục 7) hướng "cách 2": phân tích maps/*.dat (viết công cụ đọc mã/ phân tích bản ghi) để (a) đặt cổng torii lớn ở đúng tọa độ từng lối chuyển khu, (b) đặt biểu tượng lá giữa sân, (c) ba nhà shop hàng trên (cùng một id) thành ba kiểu khác nhau. Rủi ro: ghi sai byte làm hỏng map → làm trên bản sao, giao jar test riêng.
-- Người dùng đã gửi tileset thứ hai (1536x1024, ảnh làng lá có torii lớn bậc thang, nhà hai tầng, chợ, bia lá, tháp nước, cầu, tượng xanh…) làm lựa chọn thêm; chưa dùng.
-- Chưa xử lý: dải ngang (179, 180, 219-222, 241-245, 295, 299, 334, 337, 371 …), sàn gỗ 274-288, ô cát/kính 246/371.
-- Lối chuyển khu trong game là mũi tên cam nhỏ + tên điểm đến, không phải ảnh cổng riêng; vị trí nằm trong maps/*.dat.
-- Rủi ro đã biết: ô 161 có thể dùng ở map khác; ảnh nguồn JPEG nên chi tiết nhỏ hơi mờ; ô nền lặp lại thấy rõ.
-
-## 5. Cách tái tạo (thư mục làm việc mất giữa các phiên)
-Cần người dùng gửi lại: jar gốc, tileset JPEG 1536x1024 (B3698933-…jpeg), tùy chọn ảnh nhãn IMG_3209/3210. Script trong outputs: gpdt.py, seg.py, labels.py, build.py, apply2.py (chạy trước, đọc jar gốc, ghi out/maps.dat), apply3.py (chạy sau, sửa out/maps.dat: nền đá, ô 161, 246). apply.py là bản cũ (v1), bỏ qua. Đóng gói: zipfile sao chép toàn bộ jar gốc, chỉ thay assets/maps.dat.
-
-## 6. Việc tiếp theo
-1. Chờ người dùng xác nhận cách 2 và chọn chi tiết (cổng, nhà, bia lá) trong hai tileset; sau đó phân tích maps/11.dat, giao jar test.
-2. Xử lý dải ngang và sàn gỗ nếu người dùng muốn.
-3. Hệ thống ngũ đại cường quốc, sau đó pet Akatsuki (cần giải mã data/*.json).
-
-## 7. CẬP NHẬT v6 – giải mã maps/*.dat và đặt cổng/nhà/biểu tượng (jar: goPetdevdao_v1_8_gametuoitho_v4_maps_v6.jar)
-Định dạng maps/NN.dat (suy ra bằng cách đọc bytecode lớp ek.a(DataInputStream,dz), el.a, id; mapfmt.py đọc đúng hết cả 26 map, mapwrite.py ghi lại byte-identical):
-- byte nA, byte nB; (nA+nB) mục kiểu: [short id ảnh newMapData][byte cờ]; nA kiểu đầu là ảnh nền (dải ô 24px), còn lại là đối tượng. Cờ 1 = hoạt ảnh (_a/_b, thêm 5 byte/đối tượng), cờ 0/2 = ảnh tĩnh.
-- byte W, H (số ô, ô 24px), byte số lớp; lớp[H][W] byte (nibble cao = chỉ số ảnh nền, nibble thấp-1 = số thứ tự ô 24px trong dải); mảng q[H][W].
-- int N đối tượng: [byte kiểu][short x][short y][byte j] (+5 byte nếu cờ 1). Ảnh tĩnh vẽ với đáy-giữa tại (x,y). Danh sách PHẢI sắp tăng dần theo y (game vẽ xen kẽ với nhân vật theo y): luôn chèn đúng thứ tự y. Thêm kiểu mới = nối cuối danh sách kiểu (chỉ số cũ không đổi).
-- int K bản ghi el: [byte loại][byte b][short x][short y][5 byte hộp] và nếu loại≠0: [byte đích][byte][UTF tên][byte]. Loại 1 = lối chuyển khu (hộp va chạm = x+f1, y+f2, rộng f3, cao f4).
-- byte C, rồi C mục [byte, short x, short y] (điểm xuất hiện).
-Đã làm: (a) thêm ảnh mới newMapData/2001-2009.png (4 kiểu nhà 2001-2004, dải nền plaza 2008-2009, cổng torii 2005 lớn 56x43 và 2007 nhỏ 40x31) vào maps.dat; (b) map 11 (làng): 4 căn nhà id 189 thành 4 kiểu khác nhau (đỏ, xanh dương, cam, mái nâu, sắp theo x), sân giữa (ô 5..11 x 8..11) được lát bằng nguyên tấm nền đá có bia xoáy lá (168x96, cắt thành 28 ô nền 24px trong 2 dải ảnh nền mới 2008/2009, nA tăng 2→4, các chỉ số kiểu đối tượng đã dịch +2), bảng đỏ "2024" (id 238) đã xóa khỏi map 11, hai tượng 259/300 dời sang x=150 và x=258 để đứng hai bên bia; (c) MỌI map có lối ra (loại 1, 49 lối ở 25 map) đặt một cổng torii tại giữa-đáy hộp lối ra. Scripts: apply2.py → apply3.py → apply4.py (đọc out/maps.dat, ghi out/maps_final.dat + jar v6). render.py dựng ảnh xem trước map (không vẽ hoạt ảnh).
-Chưa kiểm chứng trong game: tọa độ gần mép map có thể che mất lối; cổng ở map hang/nội thất có thể lạc phong cách; map 35 danh sách đối tượng vốn không sắp theo y.
-
-Cập nhật tiếp (v6): map 11 chỉ còn MỘT núi Hokage (ảnh mới 2010, 190x57, đáy-giữa tại (330,50)), bỏ 4 bản id 191 và 2 cây thông 158 ở y<70, 250<x<330 để lộ mặt núi. Núi phải có y nhỏ hơn cổng Chợ trời (đáy y=57) vì game vẽ theo thứ tự y. Nhà cam (x=242) và cổng che một phần núi; có thể dời nhà/cổng nếu người dùng muốn thấy rõ cả 4 mặt.
-
-## 8. CẬP NHẬT v7 – map Linh Lâm (maps/13.dat) thành sa mạc (jar: goPetdevdao_v1_8_gametuoitho_v4_maps_v7.jar, gồm toàn bộ v6)
-- Tên map ↔ file: tên điểm đến trong bản ghi el là map id: 13=Linh Lâm, 15=Đại Linh Cảnh, 16=Đường lên núi, 19=Đấu trường, 22=Chợ trời, 24=Sông Băng, 11=làng (TP Linh Thú).
-- Người dùng gửi tileset sa mạc/Phong quốc thứ ba (7F4923A7-…png, 1536x1024). seg2_comps.py tách chi tiết, chỉ số trong apply5.py (SP) là chỉ số của bảng này.
-- Cách làm riêng cho từng map (ảnh dùng chung theo id nên KHÔNG sửa ảnh gốc): thêm id ảnh mới (3001-3002 nền, 3101-3125 chi tiết), đổi kiểu của map 13 sang id mới; mỗi loại đối tượng xoay vòng nhiều chi tiết (CYC) cho đa dạng.
-- Nền: dải 161/162 GỐC được tô lại (trắng tuyết→cát sáng, xanh cỏ→cát đậm, viền xanh→viền cát, xám→đá cuội) thành 3001/3002, map 13 dùng chúng ở chỗ 161/162.
-- Cây thông 158→cọ/cây khô/xương rồng, anh đào 157/159→cọ lớn/đồi đá/cây lá, đá 164/165/186→đá sa mạc, bụi 170-172→bụi nhỏ, biển 168, bụi 40, hàng rào 185→bụi, cổng torii→cổng đá có cờ 風.
-- LƯU Ý: ở các map khác ô 161 idx10 (cỏ đặc) đã bị thay bằng đá lát xám ở v3-v6 (gồm cả map khác ngoài map 11); người dùng chưa phản hồi. Nếu thấy lạ, hạn chế phạm vi chỉ còn map 11 bằng cách tạo ảnh nền mới cho map 11 thay vì sửa ảnh 161.
-- Chưa kiểm chứng trong game. Cổng ở lối Linh Mộc (đông) bị cây che.
-Trình tự chạy lại: apply2 → apply3 → apply4 (tạo v6) → apply5 (tạo v7).
+5. Rủi ro / việc tiếp
+Nếu quái vẫn biến mất: client có thể xoá theo VỊ TRÍ hoặc theo danh sách khác; xem client do.class (hàm đọc gói 81/22 chưa xác định được) và cách client xử lý quái chết.
+Id có thể chạm id của map khác khi n lớn (chỉ tới +900, trong cùng map nên không sao); cz.f() (map 20, 35) dùng công thức id riêng, không qua MobId.
+Quái "đặc biệt" (cờ u, 30% xuất hiện) có logic riêng, chưa kiểm thử riêng.
+6. Cập nhật 15:35 - v5: thêm item "bình x4 exp 5 tiếng"
+Jar: out/goPetdevdao_v1_8_gametuoitho_v4_sasuke_v5_binhx4_5h.jar (gồm toàn bộ bản vá respawn v4).
+Thêm item id 6015 (type 10, sao chép từ 6014 "bình x4 exp", icon items/61036.png) vào data/item.json; thêm vào shop id 39 (entry id 137, tiền loại 10, giá 1000 = 10 lần giá 6014 là 100) trong data/shop.json. Dữ liệu mã hóa lại bằng cùng thuật toán (key ở mục 2).
+Cơ chế dùng bình: ao.class có 2 chỗ gọi offline.z.a(du, itemId, 30) (30 phút cố định) khi item type==10. Đã vá: thay bằng offline/ExpPotion.a(du,id): id 6015 -> z.a(du, 6014, 300) (x4, 300 phút), còn lại 30 phút như cũ; thay phép so sánh id==6014/id==200 (chọn x4 cho thông báo) bằng ExpPotion.m(id); sửa thông báo thành "...trong thời gian hiệu lực của bình!" (trước ghi cứng 30 phút). Nguồn scratchpad/src3/ExpPotion.java.
+z.a cộng dồn thời gian nếu buff đang chạy (ag > now), hệ số tối đa 4.0 (có chống cheat cắt về 4).
+Đã kiểm tra: ao.class qua -Xverify:all, item 6015 đọc được (type 10). CHƯA chạy trong game; chưa thử trong game việc dùng bình và hiển thị tên/giá ở shop.
+7. Cập nhật 15:50 - v6: sửa chỗ bán bình x4 5 tiếng
+Lỗi v5: mình thêm item vào shop.json ShopId 39 nhưng shop người dùng mở (shop bình/thức ăn, nơi bán bình x4 30 phút giá 60 loại tiền 1) là shop 19001 lập trình cứng trong offline.eu.b(int) (không đọc shop.json). Bảng 19001 gồm 14 dòng [itemId, loạiTiền, giá]: 6001, 6002, 6009, 6010, 6011, 6014(1,60), 7003, 7054, 7055, 8007, 7056, 7063, 8020, 7005.
+Vá v6 (không chèn bytecode): thêm lớp offline/ShopX (nguồn scratchpad/src4/ShopX.java) có b(int) gọi eu.b(int) rồi nếu shop==19001 thì thêm dòng et(maxId+1, 19001, 6015, 0, 1, {1}, {600}, true) (loại tiền 1, giá 600 = 10 lần bình 30 phút). Đổi Methodref eu.b:(I)List (#2185 của ao.class) sang lớp ShopX nên cả 14 chỗ gọi trong ao đều đi qua ShopX.
+Đã test headless: shop 19001 ra 15 dòng, dòng cuối item 6015 giá 600, gọi 2 lần không bị nhân đôi. CHƯA chạy trong game.
+Jar: out/goPetdevdao_v1_8_gametuoitho_v4_sasuke_v6_binhx4_5h.jar.
